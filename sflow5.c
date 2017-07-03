@@ -25,6 +25,7 @@
 #include "sflowH.h"
 #include "sflow_protoH.h" // sFlow v5
 
+//#define DEVEL 1
 
 #ifndef DEVEL
 #   define dbg_printf(...) /* printf(__VA_ARGS__) */
@@ -67,39 +68,10 @@ typedef struct exporter_sflow_s {
  * 6 : EX_NEXT_HOP_v4, EX_NEXT_HOP_BGP_v6, EX_ROUTER_IP_v6
  * 7 : EX_NEXT_HOP_v6, EX_NEXT_HOP_BGP_v6, EX_ROUTER_IP_v6
  */
-static uint16_t sflow_output_record_size[MAX_SFLOW_EXTENSIONS];
-
-// All available extensions for sflow
-static uint16_t sflow_extensions[] = { 
-	EX_IO_SNMP_4, 
-	EX_AS_4, 
-	EX_MULIPLE, 
-	EX_VLAN, 
-	EX_MAC_1, 
-	EX_RECEIVED,
-	0 			// final token
-};
-static int Num_enabled_extensions;
-
-static struct sflow_ip_extensions_s {
-	int next_hop;
-	int next_hop_bgp;
-	int router_ip;
-} sflow_ip_extensions[] = {
-	{ EX_NEXT_HOP_v4, EX_NEXT_HOP_BGP_v4, EX_ROUTER_IP_v4 },
-	{ EX_NEXT_HOP_v6, EX_NEXT_HOP_BGP_v4, EX_ROUTER_IP_v4 },
-	{ EX_NEXT_HOP_v4, EX_NEXT_HOP_BGP_v6, EX_ROUTER_IP_v4 },
-	{ EX_NEXT_HOP_v6, EX_NEXT_HOP_BGP_v6, EX_ROUTER_IP_v4 },
-	{ EX_NEXT_HOP_v4, EX_NEXT_HOP_BGP_v4, EX_ROUTER_IP_v6 },
-	{ EX_NEXT_HOP_v6, EX_NEXT_HOP_BGP_v4, EX_ROUTER_IP_v6 },
-	{ EX_NEXT_HOP_v4, EX_NEXT_HOP_BGP_v6, EX_ROUTER_IP_v6 },
-	{ EX_NEXT_HOP_v6, EX_NEXT_HOP_BGP_v6, EX_ROUTER_IP_v6 },
-};
 
 #define SFLOW_NEXT_HOP 	   1
 #define SFLOW_NEXT_HOP_BGP 2
 #define SFLOW_ROUTER_IP    4
-static int IP_extension_mask = 0;
 
 
 #define YES 1
@@ -163,7 +135,6 @@ typedef struct _SFConfig {
 } SFConfig;
 
 /* make the options structure global to the program */
-static SFConfig sfConfig;
 
 typedef struct _SFSample {
 	struct in_addr sourceIP;		// EX_ROUTER_IP_v4
@@ -363,14 +334,17 @@ static inline void readFlowSample_v2v4(SFSample *sample);
 
 static inline void readCountersSample_v2v4(SFSample *sample);
 
-static inline void StoreSflowRecord(SFSample *sample);
-
 //extern int verbose;
-#define verbose 1
+//#define verbose 1
+int  verbose;
 
 /* Variable globales */
 int sockfdEnvoie;
 struct sockaddr_in envoie_addr;
+
+static void LogError(char* format, ...) {
+	printf("erreur ............\n");
+}
 
 
 
@@ -524,7 +498,6 @@ char agentIP[51], srcIP[51], dstIP[51];
 	sample->sampledPacketSize - sample->stripped - sample->offsetToIPV4,
 	sample->meanSkipCount);
 
-	sentToGraylog(sample);
 }
 
 /*_________________---------------------------__________________
@@ -566,6 +539,7 @@ static void writeCountersLine(SFSample *sample)
 
 static void receiveError(SFSample *sample, char *errm, int hexdump) 
 {
+	printf("je receive error utilisé");
 	char ipbuf[51];
 	char scratch[6000];
 	char *msg = "";
@@ -574,9 +548,9 @@ static void receiveError(SFSample *sample, char *errm, int hexdump)
 	if(errm) msg = errm;
 	if(hexdump) {
 		printHex(sample->rawSample, sample->rawSampleLen, scratch, 6000, markOffset, 16);
-		hex = scratch;
+		//hex = scratch;
 	}
-	//LogError("SFLOW: %s (source IP = %s) %s", msg, IP_to_a(sample->sourceIP.s_addr, ipbuf, 51), hex);
+	LogError("SFLOW: %s (source IP = %s) %s", msg, IP_to_a(sample->sourceIP.s_addr, ipbuf, 51), hex);
 
 	SFABORT(sample, SF_ABORT_DECODE_ERROR);
 
@@ -592,7 +566,7 @@ static void lengthCheck(SFSample *sample, char *description, u_char *start, int 
 	uint32_t adjustedLen = ((len + 3) >> 2) << 2;
 	if(actualLen != adjustedLen) {
 		dbg_printf("%s length error (expected %d, found %d)\n", description, len, actualLen);
-		//LogError("SFLOW: %s length error (expected %d, found %d)", description, len, actualLen);
+		LogError("SFLOW: %s length error (expected %d, found %d)", description, len, actualLen);
 		SFABORT(sample, SF_ABORT_LENGTH_ERROR);
   }
 
@@ -759,10 +733,8 @@ static void decodeIPLayer4(SFSample *sample, u_char *ptr, uint32_t ipProtocol) {
 			dbg_printf("TCPDstPort %u\n",sample->dcd_dport);
 			dbg_printf("TCPFlags %u\n", sample->dcd_tcpFlags);
 			if(sample->dcd_dport == 80) {
-	int bytesLeft;
 	int headerBytes = (tcp.th_off_and_unused >> 4) * 4;
 	ptr += headerBytes;
-	bytesLeft = sample->header + sample->headerLen - ptr;
 			}
 		}
 		break;
@@ -1473,7 +1445,7 @@ static void readFlowSample_header(SFSample *sample) {
 		dbg_printf("NO_DECODE headerProtocol=%d\n", sample->headerProtocol);
 		break;
 	default:
-		//LogError("SFLOW: undefined headerProtocol = %d", sample->headerProtocol);
+		LogError("SFLOW: undefined headerProtocol = %d", sample->headerProtocol);
 		exit(-12);
 	}
 	
@@ -1630,7 +1602,7 @@ static void readFlowSample_v2v4(SFSample *sample) {
 	case INMPACKETTYPE_HEADER: readFlowSample_header(sample); break;
 	case INMPACKETTYPE_IPV4: readFlowSample_IPv4(sample); break;
 	case INMPACKETTYPE_IPV6: readFlowSample_IPv6(sample); break;
-	default: receiveError(sample, "unexpected packet_data_tag", YES); break;
+	//default: receiveError(sample, "unexpected packet_data_tag", YES); break;
 	}
 
 	sample->extended_data_tag = 0;
@@ -1656,8 +1628,8 @@ static void readFlowSample_v2v4(SFSample *sample) {
 			case INMEXTENDED_URL: 
 				readExtendedUrl(sample); break;
 			default: 
-				//LogError("Unrecognized extended data tag: %u", extended_tag); 
-				receiveError(sample, "unrecognized extended data tag", YES); 
+				LogError("Unrecognized extended data tag: %u", extended_tag); 
+				//receiveError(sample, "unrecognized extended data tag", YES); 
 			break;
 			}
 		}
@@ -1665,6 +1637,7 @@ static void readFlowSample_v2v4(SFSample *sample) {
 	
 	if ( verbose ) 
 		writeFlowLine(sample);
+	sentToGraylog(sample);
 }
 
 /*_________________---------------------------__________________
@@ -1763,6 +1736,7 @@ static void readFlowSample(SFSample *sample, int expanded) {
 	
 	if ( verbose ) 
 		writeFlowLine(sample);
+	sentToGraylog(sample);
 }
 
 /*_________________---------------------------__________________
@@ -1934,7 +1908,7 @@ static void readCountersSample_v2v4(SFSample *sample)
 	case INMCOUNTERSVERSION_VG:
 	case INMCOUNTERSVERSION_WAN: readCounters_generic(sample); break;
 	case INMCOUNTERSVERSION_VLAN: break;
-	default: receiveError(sample, "unknown stats version", YES); break;
+	//default: receiveError(sample, "unknown stats version", YES); break;
 	}
 	
 	/* now see if there are any specific counter blocks to add */
@@ -1946,11 +1920,12 @@ static void readCountersSample_v2v4(SFSample *sample)
 	case INMCOUNTERSVERSION_VG: readCounters_vg(sample); break;
 	case INMCOUNTERSVERSION_WAN: break;
 	case INMCOUNTERSVERSION_VLAN: readCounters_vlan(sample); break;
-	default: receiveError(sample, "unknown INMCOUNTERSVERSION", YES); break;
+	//default: receiveError(sample, "unknown INMCOUNTERSVERSION", YES); break;
 	}
 	/* line-by-line output... */
 	if ( verbose )
 		writeCountersLine(sample);
+	sentToGraylog(sample);
 }
 
 /*_________________---------------------------__________________
@@ -2009,6 +1984,7 @@ static void readCountersSample(SFSample *sample, int expanded) {
 	/* line-by-line output... */
 	if ( verbose )
 		writeCountersLine(sample);
+	sentToGraylog(sample);
 
 }
 
@@ -2038,7 +2014,7 @@ char buf[51];
 	if(sample->datagramVersion != 2 &&
 		 sample->datagramVersion != 4 &&
 		 sample->datagramVersion != 5) {
-		receiveError(sample,	"unexpected datagram version number\n", YES);
+		//receiveError(sample,	"unexpected datagram version number\n", YES);
 	}
 	
 	/* get the agent address */
@@ -2086,8 +2062,8 @@ char buf[51];
 					break;
 				case COUNTERSSAMPLE: readCountersSample_v2v4(sample); 
 					break;
-				default: receiveError(sample, "unexpected sample type", YES); 
-					break;
+				//default: receiveError(sample, "unexpected sample type", YES); 
+				//	break;
 			}
 		}
 		dbg_printf("endSample	 ----------------------\n");
@@ -2138,6 +2114,8 @@ int main (int argc,char *argv[]) {
 		exit(1);
 	}
 
+	verbose = optl;
+
 
 	int sockfd;
 	int n;
@@ -2155,7 +2133,7 @@ int main (int argc,char *argv[]) {
 	memset( (char*) &ecoute_addr,0, sizeof(ecoute_addr) );
 	ecoute_addr.sin_family = PF_INET;
 	ecoute_addr.sin_addr.s_addr = htonl (INADDR_ANY);
-	ecoute_addr.sin_port = htons(8000); //port d'écoute
+	ecoute_addr.sin_port = htons(ports); //port d'écoute
  
 	if (bind(sockfd,(struct sockaddr *)&ecoute_addr, sizeof(ecoute_addr) ) <0) {
 		perror ("erreur : bind\n");
@@ -2172,7 +2150,7 @@ int main (int argc,char *argv[]) {
 	memset( (char*) &envoie_addr,0, sizeof(envoie_addr) );
 	envoie_addr.sin_family = PF_INET;
 	envoie_addr.sin_addr.s_addr = inet_addr("172.20.194.105");
-	envoie_addr.sin_port = htons(8010); //on envoie sur le port 8010
+	envoie_addr.sin_port = htons(portd); //on envoie sur le port 8010
 
 
 	while(1) {
