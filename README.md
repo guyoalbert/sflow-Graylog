@@ -43,7 +43,7 @@ Pour réaliser ce programme, j'ai utilisé le code disponible sur :
 ## sflow-Graylog
 
 This program allows you to convert sflow logs comming from a port of your machine into simple text lines which are send to another port. 
-So, it's possible to add sflow file into Graylog by selecting the Raw/Plaintext UDP input and listening the destination port of the program
+So, it's possible to add sflow logs into Graylog by selecting the Raw/Plaintext UDP input and listening the destination port of the program
 
 
 ## installation
