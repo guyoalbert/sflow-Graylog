@@ -4,8 +4,8 @@ Ce programme permet de convertir des logs de type sflow arrivant sur un port sou
 
 # installation
 
-Télécharger le dossiers, décompresser
-Taper le ligne de commande :
+Télécharger le dossiers puis décompresser. Pour compiler, taper le ligne de commande :
+
 	gcc slow5.c -o sflow-adapter
 
 **Pour exécuter :**
