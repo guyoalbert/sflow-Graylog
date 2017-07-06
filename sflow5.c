@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -25,7 +26,7 @@
 #include "sflowH.h"
 #include "sflow_protoH.h" // sFlow v5
 
-//#define DEVEL 1
+//define DEVEL 1
 
 #ifndef DEVEL
 #   define dbg_printf(...) /* printf(__VA_ARGS__) */
@@ -414,7 +415,7 @@ static void sentToGraylog(SFSample *sample) {
 
 	char agentIP[51], srcIP[51], dstIP[51];
 	// source
-	n = sprintf(buff2, "FLOW,%s,%d,%d,%02x%02x%02x%02x%02x%02x,%02x%02x%02x%02x%02x%02x,0x%04x,%d,%d,IP: %s,%s,%d,0x%02x,%d,%d,%d,0x%02x,%d,%d,%d\n",
+	n = sprintf(buff2, "FLOW,%s,%d,%d,%02x%02x%02x%02x%02x%02x,%02x%02x%02x%02x%02x%02x,0x%04x,%d,%d,%s,%s,%d,0x%02x,%d,%d,%d,0x%02x,%d,%d,%d\n",
 	printAddress(&sample->agent_addr, agentIP, 50),
 	sample->inputPort,
 	sample->outputPort,
@@ -2071,19 +2072,47 @@ char buf[51];
 } // readSFlowDatagram
 
 
+void daemonize() {
+	pid_t pid, sid;
+	pid = fork();
+	if (pid < 0) {
+		perror("ERREUR: fork");
+		exit(1);
+	} else if (pid > 0) {
+		exit(0);
+	}
+
+	umask(0);
+	sid = setsid();
+	if (sid < 0 ) {
+		perror("ERREUR: daemonize::sid");
+		exit(1);
+	}
+	
+	close( STDIN_FILENO );
+	close( STDOUT_FILENO );
+	close( STDERR_FILENO );
+}
+
+
 int main (int argc,char *argv[]) {
 
 	/* Traitement des options */
 	int opt;
 	int optl = 0;		//Affichage console
+	int optp = 0;		//Créé un daemon
 	int ports = -1;		//Port source
 	int portd = -1;		//Port destination
 
-	while ((opt = getopt(argc, argv, "ls:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "ls:d:p")) != -1) {
 		switch (opt) {
 		case 'l':
 			//printf("option l trouvée\n");
 			optl = 1;
+			break;
+		case 'p':
+			//printf("option p trouvée\n");
+			optp = 1;
 			break;
 		case 's': 
 			// Port source
@@ -2152,6 +2181,9 @@ int main (int argc,char *argv[]) {
 	envoie_addr.sin_addr.s_addr = inet_addr("172.20.194.105");
 	envoie_addr.sin_port = htons(portd); //on envoie sur le port 8010
 
+	if (optp) {
+		daemonize();
+	}
 
 	while(1) {
 
