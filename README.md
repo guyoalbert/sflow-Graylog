@@ -17,6 +17,7 @@ Télécharger le dossier puis le décompresser. Pour compiler, taper la ligne de
 	
 Options supplémentaires :
 * -l -> affiche dans le terminal les logs décodé.
+* -h -> affiche l'aide
 * -p -> permet de forker afin de créer un processus
 
 **Pour debian :**
@@ -58,6 +59,7 @@ Download this repositary and extract it. To compile, type the following command 
 	
 More options :
 * -l -> display the decoded logs in the terminal
+* -h -> display the help
 * -p -> call fork function to create another process
 
 **With debian :**
