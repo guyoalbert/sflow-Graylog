@@ -26,8 +26,8 @@ fi
 DESC="Adapteur pour Graylog"
 #DAEMON=/usr/sbin/sflow
 #DAEMON=~/sflow/sflow
-DAEMON=/root/sflow/sflow-adapter
-DAEMON_ARGS="-s 8000 -d 8010 -p"
+DAEMON=/root/sflow/sflow
+DAEMON_ARGS="-s 8000 -d 8010 -a 172.20.194.105 -p"
 
 daemon_NAME="sflow"
 PIDFILE=/var/run/$daemon_NAME.pid

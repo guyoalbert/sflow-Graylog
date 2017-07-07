@@ -13,7 +13,7 @@ Télécharger le dossier puis le décompresser. Pour compiler, taper la ligne de
 
 **Pour exécuter :**
 
-	./sflow-adapter -s [port source] -d [port destination]
+	./sflow-adapter -s [port source] -d [port destination] -a [adresse destination]
 	
 Options supplémentaires :
 * -l -> affiche dans le terminal les logs décodé.
@@ -54,7 +54,7 @@ Download this repositary and extract it. To compile, type the following command 
 
 **To execute :**
 
-	./sflow-adapter -s [port source] -d [port destination]
+	./sflow-adapter -s [source port] -d [destination port] -a [destination address]
 	
 More options :
 * -l -> display the decoded logs in the terminal

@@ -2076,7 +2076,7 @@ void daemonize() {
 	pid_t pid, sid;
 	pid = fork();
 	if (pid < 0) {
-		perror("ERREUR: fork");
+		perror("ERROR: fork");
 		exit(1);
 	} else if (pid > 0) {
 		exit(0);
@@ -2085,7 +2085,7 @@ void daemonize() {
 	umask(0);
 	sid = setsid();
 	if (sid < 0 ) {
-		perror("ERREUR: daemonize::sid");
+		perror("ERROR: daemonize::sid");
 		exit(1);
 	}
 	
@@ -2097,49 +2097,61 @@ void daemonize() {
 
 int main (int argc,char *argv[]) {
 
-	/* Traitement des options */
+	/* Options */
 	int opt;
-	int optl = 0;		//Affichage console
-	int optp = 0;		//Créé un daemon
-	int ports = -1;		//Port source
-	int portd = -1;		//Port destination
+	int optl = 0;		//Display raw logs in the terminal
+	int optp = 0;		//Create a daemon
+	int opta = 0;
+	int ports = -1;		//Source port
+	int portd = -1;		//Destination port
 
-	while ((opt = getopt(argc, argv, "ls:d:p")) != -1) {
+	char * ipaddress;
+
+	while ((opt = getopt(argc, argv, "ls:d:pa:")) != -1) {
 		switch (opt) {
 		case 'l':
-			//printf("option l trouvée\n");
+			//printf("option l\n");
 			optl = 1;
 			break;
 		case 'p':
-			//printf("option p trouvée\n");
+			//printf("option p\n");
 			optp = 1;
 			break;
 		case 's': 
-			// Port source
+			// Source port
 			ports = atoi(optarg);
-			if (ports <= 0) {
-				perror("ERREUR: port source non valide\n");
+			if (ports <= 1024) {
+				perror("ERROR: wrong source port\n");
 				exit(1);
 			}
-			//printf("port source = %d\n", ports);
+			//printf("source port = %d\n", ports);
 			break;
 		case 'd': 
-			// Port destination
+			// Destination port
 			portd = atoi(optarg);
-			if (portd <= 0) {
-				perror("ERREUR: port destination non valide\n");
+			if (portd <= 1024) {
+				perror("ERROR: wrong destination port\n");
 				exit(1);
 			}
-			//printf("port destination = %d\n", portd);
+			//printf("destination port = %d\n", portd);
+			break;
+		case 'a': 
+			// Destination address
+			opta = 1;
+			ipaddress = optarg;
+			printf("%s\n", ipaddress);
 			break;
 		}
 	} 
 
 	if (ports == -1)  {
-		perror("ERREUR: préciser le port source : ./sflow -s [portsource] -d [portdestination]\n");
+		perror("ERROR: the program needs a source port : ./sflow -s [sourceport] -d [destinationport] -a [destination address]\n");
 		exit(1);
 	} else if (portd == -1) {
-		perror("ERREUR: préciser le port destination : ./sflow -s [portsource] -d [portdestination]\n");
+		perror("ERROR: the program needs a destination port : ./sflow -s [sourceport] -d [destinationport] -a [destination address]\n");
+		exit(1);
+	} else if (opta == 0) {
+		perror("ERROR: the program needs a destination address : ./sflow -s [sourceport] -d [destinationport] -a [destination address]\n");
 		exit(1);
 	}
 
@@ -2152,34 +2164,35 @@ int main (int argc,char *argv[]) {
 	char recvbuff[3000];
 	socklen_t len=sizeof(ecoute_addr);
 
-	/* Création de la socket d'écoute */
+	/* Let's create a listening socket */
 	if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("erreur : problème socket\n");
+		perror("ERROR : socket\n");
 		exit(1);
 	}
 
-	/* On lie la socket d'écoute au port 8000 */
+	/* Bind it to the source port */
 	memset( (char*) &ecoute_addr,0, sizeof(ecoute_addr) );
 	ecoute_addr.sin_family = PF_INET;
 	ecoute_addr.sin_addr.s_addr = htonl (INADDR_ANY);
-	ecoute_addr.sin_port = htons(ports); //port d'écoute
+	ecoute_addr.sin_port = htons(ports); //listening port
  
 	if (bind(sockfd,(struct sockaddr *)&ecoute_addr, sizeof(ecoute_addr) ) <0) {
-		perror ("erreur : bind\n");
+		perror ("ERROR : bind\n");
 		exit (1);
 	}
 
-	/* On créé la socket d'envoie */
+	/* We create the sending socket */
 	if ((sockfdEnvoie = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("erreur : problème socket envoie\n");
+		perror("ERROR : sending socket\n");
 		exit(1);
 	}
 
-	/* Addresse d'envoie */
+	/* Destination address */
 	memset( (char*) &envoie_addr,0, sizeof(envoie_addr) );
 	envoie_addr.sin_family = PF_INET;
-	envoie_addr.sin_addr.s_addr = inet_addr("172.20.194.105");
-	envoie_addr.sin_port = htons(portd); //on envoie sur le port 8010
+	//envoie_addr.sin_addr.s_addr = inet_addr("172.20.194.105");
+	envoie_addr.sin_addr.s_addr = inet_addr(ipaddress);
+	envoie_addr.sin_port = htons(portd); //destination port
 
 	if (optp) {
 		daemonize();
@@ -2189,13 +2202,12 @@ int main (int argc,char *argv[]) {
 
 		n = recvfrom(sockfd, recvbuff, sizeof(recvbuff)-1, 0, (struct sockaddr *)&ecoute_addr, &len);
 		if (n <= 0) {
-			perror ("erreur : recvfrom");
+			perror ("ERROR : recvfrom");
 			exit(1);
 		}
 		//recvbuff[n]='\0';
 		//printf("Reçu : %d\n", n);
 
-		/* Traitement */
 		SFSample sample;
 		memset(&sample, 0, sizeof(sample));
 		sample.rawSample = recvbuff;
