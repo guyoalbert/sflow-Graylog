@@ -2081,7 +2081,7 @@ void help() {
 	printf("	-h display the help");
 	printf("	-l display raw logs\n");
 	printf("	-p fork to create another process\n");
-	printf("\nUsage exemple : ./sflow-adapter -s 8000 -d 8010 -a 172.20.194.223 -l\n\n");
+	printf("\nUsage example : ./sflow-adapter -s 8000 -d 8010 -a 172.20.194.223 -l\n\n");
 }
 
 void daemonize() {
