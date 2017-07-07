@@ -2071,6 +2071,18 @@ char buf[51];
 	}
 } // readSFlowDatagram
 
+void help() {
+	printf("\n     --------------\n     -----Help-----\n     --------------\n");
+	printf("\nThis program allows you to convert sflow logs comming from a source port of your computer into raw text lines which are sent to a destination port of the same machine. So, it's possible to add sflow logs into Graylog by selecting the Raw/Plaintext UDP input and listening the destination port configured in the sflow-adapter program.\n");
+	printf("\nAviable option : \n");
+	printf("	-s [port] source port\n");
+	printf("	-d [port] destnation port\n");
+	printf("	-a [ip address] destination address\n");
+	printf("	-h display the help");
+	printf("	-l display raw logs\n");
+	printf("	-p fork to create another process\n");
+	printf("\nUsage exemple : ./sflow-adapter -s 8000 -d 8010 -a 172.20.194.223 -l\n\n");
+}
 
 void daemonize() {
 	pid_t pid, sid;
@@ -2107,7 +2119,7 @@ int main (int argc,char *argv[]) {
 
 	char * ipaddress;
 
-	while ((opt = getopt(argc, argv, "ls:d:pa:")) != -1) {
+	while ((opt = getopt(argc, argv, "ls:d:pa:h")) != -1) {
 		switch (opt) {
 		case 'l':
 			//printf("option l\n");
@@ -2140,6 +2152,11 @@ int main (int argc,char *argv[]) {
 			opta = 1;
 			ipaddress = optarg;
 			printf("%s\n", ipaddress);
+			break;
+		case 'h':
+			// help
+			help();
+			exit(0);
 			break;
 		}
 	} 
