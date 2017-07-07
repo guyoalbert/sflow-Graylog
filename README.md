@@ -2,12 +2,12 @@
 
 ## sflow-Graylog
 
-Ce programme permet de convertir des logs de type sflow arrivant sur un port source en ligne de texte étant renvoyées sur un autre port de la machine.
-Ainsi, il est possible d'ajouter à graylog les logs de type sflow en sélectionnant l'inputs Raw/Plaintext UDP et en écoutant le port de sortie du programme.
+Ce programme permet de convertir des logs de type sflow arrivant sur un port source d'une machine, en ligne de texte qui sont ensuite renvoyées sur un autre port de cette même machine.
+Ainsi, il est possible d'ajouter à Graylog les logs de type sflow en sélectionnant dans l'application l'input Raw/Plaintext UDP et en écoutant le port de sortie configuré dans le programme sflow-adapter.
 
 ## installation
 
-Télécharger le dossiers puis décompresser. Pour compiler, taper le ligne de commande :
+Télécharger le dossier puis le décompresser. Pour compiler, taper la ligne de commande suivante :
 
 	gcc slow5.c -o sflow-adapter
 
@@ -17,14 +17,14 @@ Télécharger le dossiers puis décompresser. Pour compiler, taper le ligne de c
 	
 Options supplémentaires :
 * -l -> affiche dans le terminal les logs décodé.
-* -p -> permet de fork afin de créer un processur
+* -p -> permet de forker afin de créer un processus
 
 **Pour debian :**
 
-Il est possble d'utiliser le programme en daemon à l'aide du script sflow
+Il est possble d'exécuter le programme en daemon à l'aide du script sflow
 * Placer le script dans /etc/init.d
-* Editer ce sript pour spécifier les options souhaité (port source et destination par exemple)
-* Modifier également le chemin d'acces au programme.
+* Éditer ce script pour spécifier les options souhaitées (port source et port de destination par exemple)
+* Modifier également le chemin d'accès au programme.
 
 Dans le terminal saisir :
 ```
@@ -42,13 +42,13 @@ Pour réaliser ce programme, j'ai utilisé le code disponible sur :
 
 ## sflow-Graylog
 
-This program allows you to convert sflow logs comming from a port of your machine into simple text lines which are send to another port. 
-So, it's possible to add sflow logs into Graylog by selecting the Raw/Plaintext UDP input and listening the destination port of the program
+This program allows you to convert sflow logs comming from a source port of your computer into raw text lines which are sent to a destination port of the same machine. 
+So, it's possible to add sflow logs into Graylog by selecting the Raw/Plaintext UDP input and listening the destination port configured in the sflow-adapter program.
 
 
 ## installation
 
-Download this repositary and extract it. To compile, use in your terminal :
+Download this repositary and extract it. To compile, type the following command in a terminal :
 
 	gcc slow5.c -o sflow-adapter
 
@@ -56,18 +56,18 @@ Download this repositary and extract it. To compile, use in your terminal :
 
 	./sflow-adapter -s [port source] -d [port destination]
 	
-Other options :
-* -l -> display the logs in the terminal
-* -p -> call fork to create another process
+More options :
+* -l -> display the decoded logs in the terminal
+* -p -> call fork function to create another process
 
 **With debian :**
 
-It is possible to create a daemon
-* Place the script ```sflow``` in /etc/init.d/
-* Edit it to change your port
-* Don't forget to change the path of the executable
+It is possible to create a daemon with the ```sflow``` script :
+* Copy the script ```sflow``` in /etc/init.d/
+* Edit this script to configure your port
+* Don't forget to configure the correct the path of the executable file
 
-in the terminal, use:
+In a terminal window, use:
 ```
 systemctl daemon-reload
 systemctl enable sflow.service
